@@ -25,6 +25,7 @@ end
 
 api = InfogroupSearchAPI.new(opts)
 
+start_ts = Time.now
 result = if opts[:business]
   if opts[:counts]
     api.business_count(params, opts)
@@ -38,8 +39,10 @@ else
     api.consumer_search(params, opts)
   end
 end
+elapsed = Time.now - start_ts
 
 ap result
+$stderr.puts "Elapsed: #{elapsed}" if opts[:debug]
 
 # if STDIN.tty?
 #   api.execute(http, base_uri, params, opts, headers)

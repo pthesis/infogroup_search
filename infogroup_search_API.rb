@@ -2,6 +2,7 @@ require "net/http"
 require "addressable/uri"
 require "json"
 require "dalli"
+require "digest"
 
 class InfogroupSearchAPI
   attr_reader :config
@@ -62,7 +63,8 @@ class InfogroupSearchAPI
 
   def consumer_count(criteria, options)
     if @cache
-      result = @cache.get(criteria)
+      key = Digest::SHA2.hexdigest(criteria.to_s)
+      result = @cache.get(key)
       if result
         $stderr.puts "USING CACHE!"
         return result
@@ -70,7 +72,7 @@ class InfogroupSearchAPI
     end
     result = execute(build_url("usconsumer", true), full_params(criteria, options), :counts => true)
     if @cache
-      @cache.set(criteria, result)
+      @cache.set(key, result)
       $stderr.puts "CACHING!"
     end
     result
@@ -121,7 +123,7 @@ class InfogroupSearchAPI
     $stderr.puts uri if config[:debug]
 
     resp = http.get2(uri.omit(:scheme, :host).to_s, @headers)
-    if (resp.code != "200")
+    result = if (resp.code != "200")
       $stderr.puts "HTTP response code: #{resp.code}"
       $stderr.puts resp.body
       exit 1
