@@ -1,6 +1,7 @@
 require "net/http"
 require "addressable/uri"
 require "json"
+require "dalli"
 
 class InfogroupSearchAPI
   attr_reader :config
@@ -23,6 +24,14 @@ class InfogroupSearchAPI
     @config[:default_pagesize] = 10
     @config[:noesb] = config[:noesb]
     @config[:debug] = config[:debug]
+    @config[:raw] = config[:raw]
+    @config[:format] = config[:format]
+    @config[:env] = config[:env]
+
+    unless config[:nocache]
+      @cache = Dalli::Client.new('localhost:11211')
+      raise "Unable to connect to memcached, aborting" unless @cache
+    end
 
     @headers = {
      "Content-Type" => "application/json; charset=utf-8",
@@ -52,20 +61,28 @@ class InfogroupSearchAPI
   end
 
   def consumer_count(criteria, options)
-    url = build_url("usconsumer", true)
-    execute(url, full_params(criteria, options), :counts => true)
+    if @cache
+      result = @cache.get(criteria)
+      if result
+        $stderr.puts "USING CACHE!"
+        return result
+      end
+    end
+    result = execute(build_url("usconsumer", true), full_params(criteria, options), :counts => true)
+    if @cache
+      @cache.set(criteria, result)
+      $stderr.puts "CACHING!"
+    end
+    result
   end
-  def consumer_search
-    url("usconsumer", false)
-    execute(url, full_params(criteria, options), :counts => false)
+  def consumer_search(criteria, options)
+    execute(build_url("usconsumer", false), full_params(criteria, options), :counts => false)
   end
-  def business_count
-    url("usbusiness", true)
-    execute(url, full_params(criteria, options), :counts => true)
+  def business_count(criteria, options)
+    execute(build_url("usbusiness", true), full_params(criteria, options), :counts => true)
   end
-  def business_search
-    url("usbusiness", false)
-    execute(url, full_params(criteria, options), :counts => false)
+  def business_search(criteria, options)
+    execute(build_url("usbusiness", false), full_params(criteria, options), :counts => false)
   end
 
   private
@@ -76,9 +93,9 @@ class InfogroupSearchAPI
 
   def base_url
     env = case config[:env]
-    when :prod
+    when "prod"
       ""
-    when :dev
+    when "dev"
       "dev"
     else
       "test"
@@ -98,7 +115,8 @@ class InfogroupSearchAPI
   end
 
   def execute(uri, params, extra_opts)
-    uri.query_values = params
+    # must stringify all values for URI query string assembly
+    uri.query_values = params.inject({}) {|h,(k,v)| h[k] = v.to_s;h}
 
     $stderr.puts uri if config[:debug]
 
@@ -108,7 +126,7 @@ class InfogroupSearchAPI
       $stderr.puts resp.body
       exit 1
     else
-      if @config[:xml] || @config[:raw]
+      if (config[:format] == "xml") || config[:raw]
         resp.body
       else
         json = resp.body

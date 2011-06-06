@@ -10,7 +10,7 @@ opts = Trollop::options do
   opt :counts, "Counts", :default => false
   opt :business, "Use Business database", :default => false
   opt :pagesize, "Results page size", :type => :int, :default => 10
-  opt :xml, "Results in XML", :default => false
+  opt :format, "Results in XML", :default => "json"
   opt :households, "Households", :default => false
   opt :debug, "Debug", :default => false
   opt :raw, "Dump raw JSON, not pretty-printed", :default => false
@@ -27,8 +27,9 @@ api = InfogroupSearchAPI.new(opts)
 
 result = if opts[:business]
   if opts[:counts]
-    api.business_count
+    api.business_count(params, opts)
   else
+    api.business_search(params, opts)
   end
 else
   if opts[:counts]
