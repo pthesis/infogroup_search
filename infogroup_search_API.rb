@@ -62,29 +62,16 @@ class InfogroupSearchAPI
   end
 
   def consumer_count(criteria, options)
-    if @cache
-      key = Digest::SHA2.hexdigest(criteria.to_s)
-      result = @cache.get(key)
-      if result
-        $stderr.puts "USING CACHE!"
-        return result
-      end
-    end
-    result = execute(build_url("usconsumer", true), full_params(criteria, options), :counts => true)
-    if @cache
-      @cache.set(key, result)
-      $stderr.puts "CACHING!"
-    end
-    result
+    execute("usconsumer", criteria, options, true)
   end
   def consumer_search(criteria, options)
-    execute(build_url("usconsumer", false), full_params(criteria, options), :counts => false)
+    execute("usconsumer", criteria, options, false)
   end
   def business_count(criteria, options)
-    execute(build_url("usbusiness", true), full_params(criteria, options), :counts => true)
+    execute("usbusiness", criteria, options, true)
   end
   def business_search(criteria, options)
-    execute(build_url("usbusiness", false), full_params(criteria, options), :counts => false)
+    execute("usbusiness", criteria, options, false)
   end
 
   private
@@ -116,7 +103,18 @@ class InfogroupSearchAPI
     url
   end
 
-  def execute(uri, params, extra_opts)
+  def execute(db, criteria, options, is_count)
+    params = full_params(criteria, options)
+    if @cache
+      key = Digest::SHA2.hexdigest(params.merge(:db => db, :counts => is_count).to_s)
+      result = @cache.get(key)
+      if result
+        $stderr.puts "USING CACHE!" if config[:debug]
+        return result
+      end
+    end
+
+    uri = build_url(db, is_count)
     # must stringify all values for URI query string assembly
     uri.query_values = params.inject({}) {|h,(k,v)| h[k] = v.to_s;h}
 
@@ -132,12 +130,18 @@ class InfogroupSearchAPI
         resp.body
       else
         json = resp.body
-        if extra_opts[:counts]
+        if is_count
           JSON.load(json)["MatchCount"] || 0
         else
           JSON.load(json)
         end
       end
     end
+
+    if @cache
+      @cache.set(key, result)
+      $stderr.puts "CACHING!" if config[:debug]
+    end
+    result
   end
 end
