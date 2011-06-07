@@ -28,11 +28,7 @@ class InfogroupSearchAPI
     @config[:raw] = config[:raw]
     @config[:format] = config[:format]
     @config[:env] = config[:env]
-
-    unless config[:nocache]
-      @cache = Dalli::Client.new('localhost:11211')
-      raise "Unable to connect to memcached, aborting" unless @cache
-    end
+    @cache = config[:cache]
 
     @headers = {
      "Content-Type" => "application/json; charset=utf-8",
@@ -126,7 +122,7 @@ class InfogroupSearchAPI
       key = Digest::SHA2.hexdigest(params.merge(options).to_s)
       result = @cache.get(key)
       if result
-        $stderr.puts "USING CACHE!" if config[:debug]
+        $stderr.puts "FOUND IN CACHE: #{key}" if config[:debug]
         return result
       end
     end
@@ -157,7 +153,7 @@ class InfogroupSearchAPI
 
     if @cache
       @cache.set(key, result)
-      $stderr.puts "CACHING!" if config[:debug]
+      $stderr.puts "CACHING: #{key}" if config[:debug]
     end
     result
   end

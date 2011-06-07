@@ -16,6 +16,7 @@ opts = Trollop::options do
   opt :raw, "Dump raw JSON, not pretty-printed", :default => false
   opt :noesb, "Bypass ESB", :default => false
   opt :metadata, "Metadata field", :type => :string
+  opt :nocache, "Suppress caching", :default => false
 end
 
 params = ARGV.inject({}) do |h,arg|
@@ -24,7 +25,12 @@ params = ARGV.inject({}) do |h,arg|
   h
 end
 
-api = InfogroupSearchAPI.new(opts)
+unless opts[:nocache]
+  @cache = Dalli::Client.new('localhost:11211')
+  raise "Unable to connect to memcached, aborting" unless @cache
+end
+
+api = InfogroupSearchAPI.new(opts.merge(:cache => @cache))
 
 start_ts = Time.now
 result = if opts[:business]
