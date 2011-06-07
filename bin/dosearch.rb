@@ -2,7 +2,7 @@
 
 require "ap"
 require "trollop"
-require "./infogroup_search_API"
+load "#{File.dirname(__FILE__)}/../lib/infogroup_search_API.rb"
 
 
 opts = Trollop::options do
@@ -17,6 +17,7 @@ opts = Trollop::options do
   opt :noesb, "Bypass ESB", :default => false
   opt :metadata, "Metadata field", :type => :string
   opt :nocache, "Suppress caching", :default => false
+  opt :expiration, "Cache expiration in seconds", :default => 7 * 24 * 60 * 60
 end
 
 params = ARGV.inject({}) do |h,arg|
@@ -26,7 +27,7 @@ params = ARGV.inject({}) do |h,arg|
 end
 
 unless opts[:nocache]
-  @cache = Dalli::Client.new('localhost:11211')
+  @cache = Dalli::Client.new('localhost:11211', :expires_in => opts[:expiration])
   raise "Unable to connect to memcached, aborting" unless @cache
 end
 

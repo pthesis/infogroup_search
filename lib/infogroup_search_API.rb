@@ -119,10 +119,11 @@ class InfogroupSearchAPI
   def execute(criteria = {}, options = {})
     params = full_params(criteria, options)
     if @cache
-      key = Digest::SHA2.hexdigest(params.merge(options).to_s)
+      keyparams = params.select {|k,v| k != "apikey"}.merge({:db => options[:db], :format => options[:format]})
+      key = Digest::SHA2.hexdigest(keyparams.to_s)
       result = @cache.get(key)
       if result
-        $stderr.puts "FOUND IN CACHE: #{key}" if config[:debug]
+        $stderr.puts "FOUND IN CACHE: #{keyparams}" if config[:debug]
         return result
       end
     end
@@ -153,7 +154,7 @@ class InfogroupSearchAPI
 
     if @cache
       @cache.set(key, result)
-      $stderr.puts "CACHING: #{key}" if config[:debug]
+      $stderr.puts "CACHING: #{keyparams}" if config[:debug]
     end
     result
   end
