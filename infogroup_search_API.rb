@@ -43,6 +43,25 @@ class InfogroupSearchAPI
     raise "Missing Infogroup API key" unless @config[:apikey]
   end
 
+  def consumer_count(criteria, options)
+    execute(criteria, options.merge(:db => "usconsumer", :counts => true))
+  end
+  def consumer_search(criteria, options)
+    execute(criteria, options.merge(:db => "usconsumer"))
+  end
+  def business_count(criteria, options)
+    execute(criteria, options.merge("usbusiness", :counts => true))
+  end
+  def business_search(criteria, options)
+    execute(criteria, options.merge("usbusiness"))
+  end
+  def consumer_metadata(field)
+    execute({}, {:db => "usconsumer", :metadata => field})
+  end
+  def business_metadata(field)
+    execute({}, {:db => "usbusiness", :metadata => field})
+  end
+
   def full_params(inputs, opts)
     params = inputs.dup
 
@@ -53,25 +72,14 @@ class InfogroupSearchAPI
     end
 
     params["apikey"] = config[:apikey]
-    params["pagesize"] = opts[:pagesize] || config[:default_pagesize] unless opts[:counts]
-    params["ReturnAllResidents"] = "true" unless opts[:households]
-    params["LifestyleMinimumLevel"] = "7"
-    params["TargetReadyMinimumLevel"] = "9"
+    params["pagesize"] = opts[:pagesize] || config[:default_pagesize] unless opts[:counts] || opts[:metadata]
+    if opts[:db] == "usconsumer" && !opts[:metadata]
+      params["ReturnAllResidents"] = "true" unless opts[:households]
+      params["LifestyleMinimumLevel"] = "7"
+      params["TargetReadyMinimumLevel"] = "9"
+    end
 
     params
-  end
-
-  def consumer_count(criteria, options)
-    execute("usconsumer", criteria, options, true)
-  end
-  def consumer_search(criteria, options)
-    execute("usconsumer", criteria, options, false)
-  end
-  def business_count(criteria, options)
-    execute("usbusiness", criteria, options, true)
-  end
-  def business_search(criteria, options)
-    execute("usbusiness", criteria, options, false)
   end
 
   private
@@ -93,20 +101,29 @@ class InfogroupSearchAPI
     Addressable::URI.parse("http://apiservices#{env}.infogroup.com/searchapi#{config[:noesb] ? '-noesb' : ''}")
   end
 
-  def build_url(db, counts)
+  def build_url(options)
     url = base_url.dup
-    url.path = [
-      url.path,
-      db,
-      counts ? "counts" : ""
-    ].join("/")
+    if options[:metadata]
+      url.path = [
+        url.path,
+        "metadata",
+        options[:db],
+        options[:metadata]
+      ].join("/")
+    else
+      url.path = [
+        url.path,
+        options[:db],
+        options[:counts] ? "counts" : ""
+      ].join("/")
+    end
     url
   end
 
-  def execute(db, criteria, options, is_count)
+  def execute(criteria = {}, options = {})
     params = full_params(criteria, options)
     if @cache
-      key = Digest::SHA2.hexdigest(params.merge(:db => db, :counts => is_count).to_s)
+      key = Digest::SHA2.hexdigest(params.merge(options).to_s)
       result = @cache.get(key)
       if result
         $stderr.puts "USING CACHE!" if config[:debug]
@@ -114,7 +131,7 @@ class InfogroupSearchAPI
       end
     end
 
-    uri = build_url(db, is_count)
+    uri = build_url(options)
     # must stringify all values for URI query string assembly
     uri.query_values = params.inject({}) {|h,(k,v)| h[k] = v.to_s;h}
 
@@ -130,7 +147,7 @@ class InfogroupSearchAPI
         resp.body
       else
         json = resp.body
-        if is_count
+        if options[:counts]
           JSON.load(json)["MatchCount"] || 0
         else
           JSON.load(json)

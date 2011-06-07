@@ -15,6 +15,7 @@ opts = Trollop::options do
   opt :debug, "Debug", :default => false
   opt :raw, "Dump raw JSON, not pretty-printed", :default => false
   opt :noesb, "Bypass ESB", :default => false
+  opt :metadata, "Metadata field", :type => :string
 end
 
 params = ARGV.inject({}) do |h,arg|
