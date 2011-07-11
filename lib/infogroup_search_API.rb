@@ -28,6 +28,7 @@ class InfogroupSearchAPI
     @config[:raw] = config[:raw]
     @config[:format] = config[:format]
     @config[:env] = config[:env]
+    @config[:onlycache] = config[:onlycache]
     @cache = config[:cache]
 
     @headers = {
@@ -139,6 +140,8 @@ class InfogroupSearchAPI
         return result
       end
     end
+
+    return if options[:onlycache]
 
     uri = build_url(options)
     # must stringify all values for URI query string assembly

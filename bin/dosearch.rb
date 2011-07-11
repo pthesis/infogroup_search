@@ -18,6 +18,7 @@ opts = Trollop::options do
   opt :noesb, "Bypass ESB", :default => false
   opt :metadata, "Metadata field", :type => :string
   opt :nocache, "Suppress caching", :default => false
+  opt :onlycache, "Only check for result in cache, do not go to main API", :default => false
   opt :expiration, "Cache expiration in seconds", :default => 7 * 24 * 60 * 60
 end
 
