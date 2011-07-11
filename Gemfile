@@ -1,4 +1,7 @@
 source 'http://rubygems.org'
 
 gem "trollop"
-gem "dalli"
+# gem "dalli"
+gem "redis"
+
+# gem "savon"

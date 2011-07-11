@@ -2,6 +2,7 @@
 
 require "ap"
 require "trollop"
+require "redis"
 load "#{File.dirname(__FILE__)}/../lib/infogroup_search_API.rb"
 
 
@@ -21,14 +22,17 @@ opts = Trollop::options do
 end
 
 params = ARGV.inject({}) do |h,arg|
-  k,v = arg.split(/=/)
-  h[k] = v
+  if arg.match(/^(.*)=(.*)/)
+    k,v = $1, $2 #arg.split(/=/)
+    h[k] = v
+  end
   h
 end
 
 unless opts[:nocache]
-  @cache = Dalli::Client.new('localhost:11211', :expires_in => opts[:expiration])
-  raise "Unable to connect to memcached, aborting" unless @cache
+  @cache = Redis.new
+  # @cache = Dalli::Client.new('localhost:11211', :expires_in => opts[:expiration])
+  # raise "Unable to connect to memcached, aborting" unless @cache
 end
 
 api = InfogroupSearchAPI.new(opts.merge(:cache => @cache))

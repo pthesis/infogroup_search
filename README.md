@@ -7,10 +7,14 @@ Ruby gem for interface to Infogroup Search API.
     api.consumer_search(params)
     api.business_count(params)
     api.business_search(params)
+    api.consumer_lookup(id)
+    api.business_lookup(id)
 
 # Command-line invocation
 
     bin/dosearch.rb [options] [search criteria]
+    bin/consumer.rb [options] id
+    bin/business.rb [options] id
 
 ## Options
 
@@ -29,11 +33,11 @@ Ruby gem for interface to Infogroup Search API.
 
 ## Search Criteria
 
-name=value pairs
+name=value pairs.  The entire "name=value" string must be quoted if the value contains any spaces or commas, probably safest to quote it if there is any non-alphanumerics at all.
 
 # Notes
 
-If a :cache option is passed in, the API will use it (via memcached/dalli).
+If a :cache option is passed in, the API will use it (via memcached/dalli or redis, anything that supports get/set).
 
 # TODO
 

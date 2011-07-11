@@ -46,16 +46,22 @@ class InfogroupSearchAPI
     execute(criteria, options.merge(:db => "usconsumer"))
   end
   def business_count(criteria, options)
-    execute(criteria, options.merge("usbusiness", :counts => true))
+    execute(criteria, options.merge(:db => "usbusiness", :counts => true))
   end
   def business_search(criteria, options)
-    execute(criteria, options.merge("usbusiness"))
+    execute(criteria, options.merge(:db => "usbusiness"))
   end
   def consumer_metadata(field)
     execute({}, {:db => "usconsumer", :metadata => field})
   end
   def business_metadata(field)
     execute({}, {:db => "usbusiness", :metadata => field})
+  end
+  def consumer_lookup(id)
+    execute({}, {:db => "usconsumer", :id => id})
+  end
+  def business_lookup(id)
+    execute({}, {:db => "usbusiness", :id => id})
   end
 
   def full_params(inputs, opts)
@@ -105,6 +111,12 @@ class InfogroupSearchAPI
         "metadata",
         options[:db],
         options[:metadata]
+      ].join("/")
+    elsif options[:id]
+      url.path = [
+        url.path,
+        options[:db],
+        options[:id]
       ].join("/")
     else
       url.path = [
