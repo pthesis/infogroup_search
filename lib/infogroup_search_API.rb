@@ -1,4 +1,5 @@
 require "net/http"
+require "net/https"
 require "addressable/uri"
 require "json"
 require "dalli"
@@ -30,6 +31,7 @@ class InfogroupSearchAPI
     @config[:env] = config[:env]
     @config[:onlycache] = config[:onlycache]
     @cache = config[:cache]
+    @config[:scheme] = config[:ssl] ? "https" : "http"
 
     @headers = {
      "Content-Type" => "application/json; charset=utf-8",
@@ -77,7 +79,7 @@ class InfogroupSearchAPI
     params["apikey"] = config[:apikey]
     params["pagesize"] = opts[:pagesize] || config[:default_pagesize] unless opts[:counts] || opts[:metadata]
     if opts[:db] == "usconsumer" && !opts[:metadata]
-      params["ReturnAllResidents"] = "true" unless opts[:households]
+      params["ReturnAllResidents"] = opts[:individuals] ? "true" : "false"
       params["LifestyleMinimumLevel"] = "7"
       params["TargetReadyMinimumLevel"] = "9"
     end
@@ -89,6 +91,8 @@ class InfogroupSearchAPI
 
   def http
     @http ||= Net::HTTP.new(base_url.host, base_url.port)
+    @http.use_ssl = true if config[:scheme] == "https"
+    @http
   end
 
   def base_url
@@ -101,7 +105,7 @@ class InfogroupSearchAPI
       "test"
     end
 
-    Addressable::URI.parse("http://apiservices#{env}.infogroup.com/searchapi#{config[:noesb] ? '-noesb' : ''}")
+    Addressable::URI.parse("#{config[:scheme]}://apiservices#{env}.infogroup.com/searchapi#{config[:noesb] ? '-noesb' : ''}")
   end
 
   def build_url(options)

@@ -12,7 +12,7 @@ opts = Trollop::options do
   opt :business, "Use Business database", :default => false
   opt :pagesize, "Results page size", :type => :int, :default => 10
   opt :format, "Results in XML", :default => "json"
-  opt :households, "Households", :default => false
+  opt :individuals, "Retrieve all individuals records (no householding)", :default => false
   opt :debug, "Debug", :default => false
   opt :raw, "Dump raw JSON, not pretty-printed", :default => false
   opt :noesb, "Bypass ESB", :default => false
@@ -20,6 +20,7 @@ opts = Trollop::options do
   opt :nocache, "Suppress caching", :default => false
   opt :onlycache, "Only check for result in cache, do not go to main API", :default => false
   opt :expiration, "Cache expiration in seconds", :default => 7 * 24 * 60 * 60
+  opt :ssl, "Connect with HTTPS", :default => false
 end
 
 params = ARGV.inject({}) do |h,arg|
