@@ -3,7 +3,7 @@
 require "ap"
 require "trollop"
 require "redis"
-load "#{File.dirname(__FILE__)}/../lib/infogroup_search_API.rb"
+load "#{File.dirname(__FILE__)}/../lib/infogroup_search_api.rb"
 
 
 opts = Trollop::options do
@@ -21,7 +21,7 @@ opts = Trollop::options do
   opt :onlycache, "Only check for result in cache, do not go to main API", :default => false
   opt :expiration, "Cache expiration in seconds", :default => 7 * 24 * 60 * 60
   opt :ssl, "Connect with HTTPS", :default => false
-  opt :apikey, "Infogroup API key, overrides APIKEY from environment", :default => ENV["INFOGROUP_APIKEY"]
+  opt :apikey, "Infogroup API key, overrides APIKEY from environment", :type => :string, :default => ENV["INFOGROUP_APIKEY"]
 end
 
 params = ARGV.inject({}) do |h,arg|

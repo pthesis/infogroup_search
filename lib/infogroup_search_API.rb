@@ -1,11 +1,11 @@
 require "net/http"
 require "net/https"
-require "addressable/uri"
 require "json"
-require "dalli"
 require "digest"
 
 class InfogroupSearchAPI
+  VERSION = "0.1"
+
   attr_reader :config
 
   # config options:
