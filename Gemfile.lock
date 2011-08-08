@@ -1,29 +1,12 @@
 GEM
   remote: http://rubygems.org/
   specs:
-    builder (3.0.0)
-    dalli (1.0.5)
-    gyoku (0.4.4)
-      builder (>= 2.1.2)
-    httpi (0.9.5)
-      rack
-    nokogiri (1.4.6)
-    nori (1.0.1)
-    rack (1.3.0)
     redis (2.2.1)
-    savon (0.9.3)
-      builder (>= 2.1.2)
-      gyoku (>= 0.4.0)
-      httpi (~> 0.9)
-      nokogiri (>= 1.4.0)
-      nori (~> 1.0)
     trollop (1.16.2)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
-  dalli
   redis
-  savon
   trollop
