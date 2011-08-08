@@ -18,17 +18,20 @@ class InfogroupSearchAPI
   # default_radius: override default search radius of 5 miles
   # default_pagesize: override default page size of 10 records
   # raw: returns raw HTTP response instead of parsing XML or JSON
+  # cache: use this for results caching
+  # onlycache: look for results in the cache, but don't go to the API on a cache miss
+  # ssl: if true, use https
+  # user_agent: override default user-agent in API request
   def initialize(config = {})
     @config = {}
-    @base_url = base_url
-    @config[:apikey] ||= ENV["INFOGROUP_APIKEY"]
+    @config[:apikey] = config[:apikey] #||= ENV["INFOGROUP_APIKEY"]
     @config[:default_radius] = 5
     @config[:default_pagesize] = 10
     @config[:noesb] = config[:noesb]
     @config[:debug] = config[:debug]
     @config[:raw] = config[:raw]
-    @config[:format] = config[:format]
-    @config[:env] = config[:env]
+    @config[:format] = config[:format] || "json"
+    @config[:env] = config[:env] || "prod"
     @config[:onlycache] = config[:onlycache]
     @cache = config[:cache]
     @config[:scheme] = config[:ssl] ? "https" : "http"
@@ -82,6 +85,7 @@ class InfogroupSearchAPI
       params["ReturnAllResidents"] = opts[:individuals] ? "true" : "false"
       params["LifestyleMinimumLevel"] = "7"
       params["TargetReadyMinimumLevel"] = "9"
+      params["LifestyleOperator"] = "OR"
     end
 
     params
@@ -90,12 +94,24 @@ class InfogroupSearchAPI
   private
 
   def http
-    @http ||= Net::HTTP.new(base_url.host, base_url.port)
-    @http.use_ssl = true if config[:scheme] == "https"
-    @http
+    @http ||= establish_http
   end
 
-  def base_url
+  def establish_http
+    url = URI.parse(domain)
+    http = Net::HTTP.new(url.host, url.port)
+    if config[:scheme] == "https"
+      http.use_ssl = true 
+      # http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      # 
+      # http.ca_path = '/etc/ssl/certs' if File.exists?('/etc/ssl/certs') # Ubuntu
+      # http.ca_file = '/opt/local/share/curl/curl-ca-bundle.crt' if File.exists?('/opt/local/share/curl/curl-ca-bundle.crt') # Mac OS X
+    end
+    # http.set_debug_output("/tmp/http.log")
+    http
+  end
+
+  def domain
     env = case config[:env]
     when "prod"
       ""
@@ -105,32 +121,35 @@ class InfogroupSearchAPI
       "test"
     end
 
-    Addressable::URI.parse("#{config[:scheme]}://apiservices#{env}.infogroup.com/searchapi#{config[:noesb] ? '-noesb' : ''}")
+    "#{config[:scheme]}://apiservices#{env}.infogroup.com"
   end
 
   def build_url(options)
-    url = base_url.dup
-    if options[:metadata]
-      url.path = [
-        url.path,
+    root = "/searchapi#{config[:noesb] ? '-noesb' : ''}"
+    path = if options[:metadata]
+      [
+        # url.path,
+        root,
         "metadata",
         options[:db],
         options[:metadata]
       ].join("/")
     elsif options[:id]
-      url.path = [
-        url.path,
+      [
+#        url.path,
+        root,
         options[:db],
         options[:id]
       ].join("/")
     else
-      url.path = [
-        url.path,
+      [
+        # url.path,
+        root,
         options[:db],
         options[:counts] ? "counts" : ""
       ].join("/")
     end
-    url
+    # Net::HTTP::Get.new(path)
   end
 
   def execute(criteria = {}, options = {})
@@ -147,13 +166,21 @@ class InfogroupSearchAPI
 
     return if options[:onlycache]
 
-    uri = build_url(options)
+    path = build_url(options)
     # must stringify all values for URI query string assembly
-    uri.query_values = params.inject({}) {|h,(k,v)| h[k] = v.to_s;h}
+    query_hash = params.inject({}) {|h,(k,v)| h[k] = v.to_s;h}
+    query_string = query_hash.map{|k,v| "#{URI.encode(k)}=#{URI.encode(v)}"}.join("&")
+    request = Net::HTTP::Get.new("#{path}?#{query_string}")
+    
+    # uri.query_values = params.inject({}) {|h,(k,v)| h[k] = v.to_s;h}
 
-    $stderr.puts uri if config[:debug]
+    if config[:debug]
+      $stderr.puts "#{config[:scheme]}://#{http.address}#{request.path}"
+    end
 
-    resp = http.get2(uri.omit(:scheme, :host).to_s, @headers)
+    # resp = http.get2(uri.omit(:scheme, :host).to_s, @headers)
+    @headers.each {|k,v| request[k] = v}
+    resp = http.request(request)
     result = if (resp.code != "200")
       $stderr.puts "HTTP response code: #{resp.code}"
       $stderr.puts resp.body
