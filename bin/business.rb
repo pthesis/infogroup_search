@@ -3,7 +3,7 @@
 require "ap"
 require "trollop"
 require "redis"
-load "#{File.dirname(__FILE__)}/../lib/infogroup_search_api.rb"
+load "#{File.dirname(__FILE__)}/../lib/infogroup_search.rb"
 
 
 opts = Trollop::options do

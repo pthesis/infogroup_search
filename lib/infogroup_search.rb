@@ -39,7 +39,7 @@ class InfogroupSearchAPI
     @headers = {
      "Content-Type" => "application/json; charset=utf-8",
      "Accept" => config[:format] == "xml" ? "application/xml" : "application/json",
-     "User-Agent" => config[:user_agent] || "github.com/jmay/infogroup_search_api"
+     "User-Agent" => config[:user_agent] || "github.com/jmay/infogroup_search"
     }
 
     raise "Missing Infogroup API key" unless @config[:apikey]
