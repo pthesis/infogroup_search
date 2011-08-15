@@ -13,6 +13,7 @@ opts = Trollop::options do
   opt :raw, "Dump raw JSON, not pretty-printed", :default => false
   opt :nocache, "Suppress caching", :default => false
   opt :expiration, "Cache expiration in seconds", :default => 7 * 24 * 60 * 60
+  opt :apikey, "Infogroup API key", :default => ENV['INFOGROUP_APIKEY']
 end
 
 business_id = ARGV.shift
