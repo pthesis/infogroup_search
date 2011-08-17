@@ -1,2 +1,4 @@
 .irb_history
 batches
+*.json
+*.txt

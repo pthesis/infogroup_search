@@ -20,7 +20,7 @@ class InfogroupSearchAPI
   # raw: returns raw HTTP response instead of parsing XML or JSON
   # cache: use this for results caching
   # onlycache: look for results in the cache, but don't go to the API on a cache miss
-  # ssl: if true, use https
+  # nossl: if true, use http; default is https
   # user_agent: override default user-agent in API request
   def initialize(config = {})
     @config = {}
@@ -34,7 +34,7 @@ class InfogroupSearchAPI
     @config[:env] = config[:env] || "prod"
     @config[:onlycache] = config[:onlycache]
     @cache = config[:cache]
-    @config[:scheme] = config[:ssl] ? "https" : "http"
+    @config[:scheme] = config[:nossl] ? "http" : "https"
 
     @headers = {
      "Content-Type" => "application/json; charset=utf-8",

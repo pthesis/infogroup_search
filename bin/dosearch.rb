@@ -20,7 +20,7 @@ opts = Trollop::options do
   opt :nocache, "Suppress caching", :default => false
   opt :onlycache, "Only check for result in cache, do not go to main API", :default => false
   opt :expiration, "Cache expiration in seconds", :default => 7 * 24 * 60 * 60
-  opt :ssl, "Connect with HTTPS", :default => false
+  opt :nossl, "Connect with HTTP instead of HTTPS", :default => false
   opt :apikey, "Infogroup API key, overrides APIKEY from environment", :type => :string, :default => ENV["INFOGROUP_APIKEY"]
 end
 
