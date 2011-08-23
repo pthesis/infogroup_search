@@ -24,14 +24,14 @@ class InfogroupSearchAPI
   # user_agent: override default user-agent in API request
   def initialize(config = {})
     @config = {}
-    @config[:apikey] = config[:apikey] #||= ENV["INFOGROUP_APIKEY"]
+    @config[:env] = config[:env] || "prod"
+    @config[:apikey] = config[:apikey] || cached_apikey
     @config[:default_radius] = 5
     @config[:default_pagesize] = 10
     @config[:noesb] = config[:noesb]
     @config[:debug] = config[:debug]
     @config[:raw] = config[:raw]
     @config[:format] = config[:format] || "json"
-    @config[:env] = config[:env] || "prod"
     @config[:onlycache] = config[:onlycache]
     @cache = config[:cache]
     @config[:scheme] = config[:nossl] ? "http" : "https"
@@ -206,5 +206,9 @@ class InfogroupSearchAPI
       $stderr.puts "CACHING: #{keyparams}" if config[:debug]
     end
     result
+  end
+
+  def cached_apikey
+    ENV["INFOGROUP_APIKEY"] || File.read("#{ENV['HOME']}/.infogroup/apikey.#{config[:env]}").strip
   end
 end
