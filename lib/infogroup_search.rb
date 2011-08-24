@@ -1,6 +1,7 @@
 require "net/http"
 require "net/https"
 require "json"
+require "yaml"
 require "digest"
 
 class InfogroupSearchAPI
@@ -25,7 +26,7 @@ class InfogroupSearchAPI
   def initialize(config = {})
     @config = {}
     @config[:env] = config[:env] || "prod"
-    @config[:apikey] = config[:apikey] || cached_apikey
+    # @config[:apikey] = config[:apikey] || cached_apikey
     @config[:default_radius] = 5
     @config[:default_pagesize] = 10
     @config[:noesb] = config[:noesb]
@@ -35,8 +36,6 @@ class InfogroupSearchAPI
     @config[:onlycache] = config[:onlycache]
     @cache = config[:cache]
     @config[:scheme] = config[:nossl] ? "http" : "https"
-    @config[:app] = config[:app] || "fuelprosper"
-    @config[:app_pw] = config[:app_pw] || @config[:env]
 
     @headers = {
      "Content-Type" => "application/json; charset=utf-8",
@@ -44,7 +43,8 @@ class InfogroupSearchAPI
      "User-Agent" => config[:user_agent] || "github.com/jmay/infogroup_search"
     }
 
-    raise "Missing Infogroup API key" unless @config[:apikey]
+    @config[:apikey] = authenticate(:app => $0.split("/").last, :username => config[:username], :password => config[:password])
+    self
   end
 
   def consumer_count(criteria, options)
@@ -71,14 +71,29 @@ class InfogroupSearchAPI
   def business_lookup(id)
     execute({}, {:db => "usbusiness", :id => id})
   end
-  def authentication
-    execute({}, {:db => "authenticate/#{config[:app]}/#{config[:app_pw]}/#{config[:app]}"})
+  def authentication(options)
+    execute({}, {
+      :db => "authenticate",
+      :id => "#{options[:username]}/#{options[:password]}/#{options[:app]}",
+      :suppress_params => true})
   end
 
-  def authenticate
-    $stderr.puts "Authenticating..."
-    if new_apikey = authentication
-      config[:apikey] = new_apikey
+  def authenticate(opts)
+    config_filename = "#{ENV['HOME']}/.infogroup/config.#{config[:env]}.yaml"
+    api_config = YAML.load_file(config_filename) rescue {}
+    begin
+      apikey_age = Time.now - Time.parse(api_config[:apikey_timestamp])
+      # force 12-hour reload
+      raise "expired" if apikey_age > 12 * 60 * 60
+      $stderr.puts "Using cached API key..."
+      api_config[:apikey]
+    rescue
+      # generate new API key
+      $stderr.puts "Generating new API key..."
+      api_config[:apikey] = authentication(opts)
+      api_config[:apikey_timestamp] = Time.now.to_s
+      File.open(config_filename, "w") {|f| f << api_config.to_yaml}
+      api_config[:apikey]
     end
   end
 
@@ -168,7 +183,11 @@ class InfogroupSearchAPI
   end
 
   def execute(criteria = {}, options = {})
-    params = full_params(criteria, options)
+    if options[:suppress_params]
+      params = nil
+    else
+      params = full_params(criteria, options)
+    end
     if @cache
       keyparams = params.select {|k,v| k != "apikey"}.merge({:db => options[:db], :format => options[:format]})
       key = Digest::SHA2.hexdigest(keyparams.to_s)
@@ -183,9 +202,14 @@ class InfogroupSearchAPI
 
     path = build_url(options)
     # must stringify all values for URI query string assembly
-    query_hash = params.inject({}) {|h,(k,v)| h[k] = v.to_s;h}
-    query_string = query_hash.map{|k,v| "#{URI.encode(k)}=#{URI.encode(v)}"}.join("&")
-    request = Net::HTTP::Get.new("#{path}?#{query_string}")
+    if params
+      query_hash = params.inject({}) {|h,(k,v)| h[k] = v.to_s;h}
+      query_string = query_hash.map{|k,v| "#{URI.encode(k)}=#{URI.encode(v)}"}.join("&")
+      full_path = "#{path}?#{query_string}"
+    else
+      full_path = path
+    end
+    request = Net::HTTP::Get.new(full_path)
     
     # uri.query_values = params.inject({}) {|h,(k,v)| h[k] = v.to_s;h}
 
@@ -198,20 +222,27 @@ class InfogroupSearchAPI
     resp = http.request(request)
     case resp.code
     when "401"
-      if !options[:authenticated] && authenticate
-        execute(criteria, options.merge(:authenticated => true))
-      else
-        $stderr.puts "Authentication failed, giving up"
-        nil
-      end
+      raise "API key expired, giving up"
+      # if !options[:authenticated] && authenticate
+      #   execute(criteria, options.merge(:authenticated => true))
+      # else
+      #   $stderr.puts "Authentication failed, giving up"
+      #   nil
+      # end
     when "200"
       if (config[:format] == "xml") || config[:raw]
         return resp.body
       end
-
+      if config[:debug]
+        resp.each_header do |h,v|
+          $stderr.puts ">>> #{h}: #{v}"
+        end
+      end
       json = resp.body
       if options[:counts]
         result = JSON.load(json)["MatchCount"] || 0
+      elsif json =~ /^\"/
+        result = json.gsub(/\"/, '')
       else
         result = JSON.load(json)
       end
@@ -229,6 +260,6 @@ class InfogroupSearchAPI
   end
 
   def cached_apikey
-    ENV["INFOGROUP_APIKEY"] || File.read("#{ENV['HOME']}/.infogroup/apikey.#{config[:env]}").strip
+    File.read("#{ENV['HOME']}/.infogroup/apikey.#{config[:env]}").strip
   end
 end

@@ -21,8 +21,10 @@ opts = Trollop::options do
   opt :onlycache, "Only check for result in cache, do not go to main API", :default => false
   opt :expiration, "Cache expiration in seconds", :default => 7 * 24 * 60 * 60
   opt :nossl, "Connect with HTTP instead of HTTPS", :default => false
-  opt :apikey, "Infogroup API key, overrides APIKEY from environment", :type => :string, :default => ENV["INFOGROUP_APIKEY"]
-  opt :app, "Application username for API authentication", :type => :string, :defalut => ENV['USER']
+  opt :apikey, "Infogroup API key, overrides APIKEY from environment", :type => :string
+  # opt :app, "Application name for API authentication", :type => :string, :default => "outlead"
+  opt :username, "Application username for API authentication (#{ENV['USER']})", :type => :string, :default => ENV['USER']
+  opt :password, "Application password for API authentication", :type => :string
 end
 
 params = ARGV.inject({}) do |h,arg|
