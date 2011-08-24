@@ -22,6 +22,7 @@ opts = Trollop::options do
   opt :expiration, "Cache expiration in seconds", :default => 7 * 24 * 60 * 60
   opt :nossl, "Connect with HTTP instead of HTTPS", :default => false
   opt :apikey, "Infogroup API key, overrides APIKEY from environment", :type => :string, :default => ENV["INFOGROUP_APIKEY"]
+  opt :app, "Application username for API authentication", :type => :string, :defalut => ENV['USER']
 end
 
 params = ARGV.inject({}) do |h,arg|
@@ -33,7 +34,12 @@ params = ARGV.inject({}) do |h,arg|
 end
 
 unless opts[:nocache]
-  @cache = Redis.new
+  begin
+    @cache = Redis.new.connect
+  rescue
+    $stderr.puts "Redis is not running; run with --nocache"
+    @cache = nil
+  end
   # @cache = Dalli::Client.new('localhost:11211', :expires_in => opts[:expiration])
   # raise "Unable to connect to memcached, aborting" unless @cache
 end

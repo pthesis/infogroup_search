@@ -35,6 +35,8 @@ class InfogroupSearchAPI
     @config[:onlycache] = config[:onlycache]
     @cache = config[:cache]
     @config[:scheme] = config[:nossl] ? "http" : "https"
+    @config[:app] = config[:app] || "fuelprosper"
+    @config[:app_pw] = config[:app_pw] || @config[:env]
 
     @headers = {
      "Content-Type" => "application/json; charset=utf-8",
@@ -68,6 +70,16 @@ class InfogroupSearchAPI
   end
   def business_lookup(id)
     execute({}, {:db => "usbusiness", :id => id})
+  end
+  def authentication
+    execute({}, {:db => "authenticate/#{config[:app]}/#{config[:app_pw]}/#{config[:app]}"})
+  end
+
+  def authenticate
+    $stderr.puts "Authenticating..."
+    if new_apikey = authentication
+      config[:apikey] = new_apikey
+    end
   end
 
   def full_params(inputs, opts)
@@ -184,28 +196,36 @@ class InfogroupSearchAPI
     # resp = http.get2(uri.omit(:scheme, :host).to_s, @headers)
     @headers.each {|k,v| request[k] = v}
     resp = http.request(request)
-    result = if (resp.code != "200")
-      $stderr.puts "HTTP response code: #{resp.code}"
-      $stderr.puts resp.body
-      exit 1
-    else
-      if (config[:format] == "xml") || config[:raw]
-        resp.body
+    case resp.code
+    when "401"
+      if !options[:authenticated] && authenticate
+        execute(criteria, options.merge(:authenticated => true))
       else
-        json = resp.body
-        if options[:counts]
-          JSON.load(json)["MatchCount"] || 0
-        else
-          JSON.load(json)
-        end
+        $stderr.puts "Authentication failed, giving up"
+        nil
       end
-    end
+    when "200"
+      if (config[:format] == "xml") || config[:raw]
+        return resp.body
+      end
 
-    if @cache
-      @cache.set(key, result)
-      $stderr.puts "CACHING: #{keyparams}" if config[:debug]
+      json = resp.body
+      if options[:counts]
+        result = JSON.load(json)["MatchCount"] || 0
+      else
+        result = JSON.load(json)
+      end
+
+      if @cache
+        @cache.set(key, result)
+        $stderr.puts "CACHING: #{keyparams}" if config[:debug]
+      end
+      result
+    else
+      $stderr.puts "HTTP error response code: #{resp.code}"
+      $stderr.puts resp.body
+      nil
     end
-    result
   end
 
   def cached_apikey
