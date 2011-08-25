@@ -90,7 +90,8 @@ class InfogroupSearchAPI
     rescue
       # generate new API key
       $stderr.puts "Generating new API key..."
-      api_config[:apikey] = authentication(opts)
+      auth_response = authentication(opts) # opts should contain username, password, app
+      api_config[:apikey] = auth_response["ApiKey"]
       api_config[:apikey_timestamp] = Time.now.to_s
       File.open(config_filename, "w") {|f| f << api_config.to_yaml}
       api_config[:apikey]
@@ -233,16 +234,16 @@ class InfogroupSearchAPI
       if (config[:format] == "xml") || config[:raw]
         return resp.body
       end
-      if config[:debug]
-        resp.each_header do |h,v|
-          $stderr.puts ">>> #{h}: #{v}"
-        end
-      end
+      # if config[:debug]
+      #   resp.each_header do |h,v|
+      #     $stderr.puts ">>> #{h}: #{v}"
+      #   end
+      # end
       json = resp.body
       if options[:counts]
         result = JSON.load(json)["MatchCount"] || 0
-      elsif json =~ /^\"/
-        result = json.gsub(/\"/, '')
+      # elsif json =~ /^\"/
+      #   result = json.gsub(/\"/, '')
       else
         result = JSON.load(json)
       end
