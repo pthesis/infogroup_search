@@ -5,7 +5,8 @@ require "yaml"
 require "digest"
 
 class InfogroupSearchAPI
-  VERSION = "0.1"
+  VERSION = "0.2"
+  APIKEY_LIFETIME = 2 * 60 * 60 # 2 hours
 
   attr_reader :config
 
@@ -83,8 +84,8 @@ class InfogroupSearchAPI
     api_config = YAML.load_file(config_filename) rescue {}
     begin
       apikey_age = Time.now - Time.parse(api_config[:apikey_timestamp])
-      # force 12-hour reload
-      raise "expired" if apikey_age > 12 * 60 * 60
+      # force key renewal
+      raise "expired" if apikey_age > APIKEY_LIFETIME
       $stderr.puts "Using cached API key..."
       api_config[:apikey]
     rescue

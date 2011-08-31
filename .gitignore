@@ -3,3 +3,4 @@ batches
 *.json
 *.txt
 *.xml
+.rvmrc
