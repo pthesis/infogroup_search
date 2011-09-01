@@ -6,7 +6,7 @@ require "digest"
 
 class InfogroupSearchAPI
   VERSION = "0.2"
-  APIKEY_LIFETIME = 2 * 60 * 60 # 2 hours
+  APIKEY_LIFETIME = 72 * 60 * 60 # supposed to expire after 24 hours, setting this higher to allow 401s to happen
 
   attr_reader :config
 
@@ -85,7 +85,7 @@ class InfogroupSearchAPI
     begin
       apikey_age = Time.now - Time.parse(api_config[:apikey_timestamp])
       # force key renewal
-      raise "expired" if apikey_age > APIKEY_LIFETIME
+      raise "expired" if apikey_age > APIKEY_LIFETIME || opts[:force]
       $stderr.puts "Using cached API key..."
       api_config[:apikey]
     rescue
@@ -224,13 +224,13 @@ class InfogroupSearchAPI
     resp = http.request(request)
     case resp.code
     when "401"
-      raise "API key expired, giving up"
-      # if !options[:authenticated] && authenticate
-      #   execute(criteria, options.merge(:authenticated => true))
-      # else
-      #   $stderr.puts "Authentication failed, giving up"
-      #   nil
-      # end
+      # raise "API key expired, giving up"
+      if !options[:authenticated] && authenticate(:force => true)
+        execute(criteria, options.merge(:authenticated => true))
+      else
+        $stderr.puts "Authentication failed, giving up"
+        nil
+      end
     when "200"
       if (config[:format] == "xml") || config[:raw]
         return resp.body
