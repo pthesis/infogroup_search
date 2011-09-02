@@ -44,7 +44,9 @@ class InfogroupSearchAPI
      "User-Agent" => config[:user_agent] || "github.com/jmay/infogroup_search"
     }
 
-    @config[:apikey] = authenticate(:app => $0.split("/").last, :username => config[:username], :password => config[:password])
+    @config[:username] = config[:username]
+    @config[:password] = config[:password]
+    authenticate!(:app => $0.split("/").last, :username => config[:username], :password => config[:password])
     self
   end
 
@@ -79,7 +81,7 @@ class InfogroupSearchAPI
       :suppress_params => true})
   end
 
-  def authenticate(opts)
+  def authenticate!(opts)
     config_filename = "#{ENV['HOME']}/.infogroup/config.#{config[:env]}.yaml"
     api_config = YAML.load_file(config_filename) rescue {}
     begin
@@ -87,7 +89,7 @@ class InfogroupSearchAPI
       # force key renewal
       raise "expired" if apikey_age > APIKEY_LIFETIME || opts[:force]
       $stderr.puts "Using cached API key..."
-      api_config[:apikey]
+      @config[:apikey] = api_config[:apikey]
     rescue
       # generate new API key
       $stderr.puts "Generating new API key..."
@@ -95,7 +97,7 @@ class InfogroupSearchAPI
       api_config[:apikey] = auth_response["ApiKey"]
       api_config[:apikey_timestamp] = Time.now.to_s
       File.open(config_filename, "w") {|f| f << api_config.to_yaml}
-      api_config[:apikey]
+      @config[:apikey] = api_config[:apikey]
     end
   end
 
@@ -224,8 +226,8 @@ class InfogroupSearchAPI
     resp = http.request(request)
     case resp.code
     when "401"
-      # raise "API key expired, giving up"
-      if !options[:authenticated] && authenticate(:force => true)
+      $stderr.puts "API key expired, renewing"
+      if !options[:authenticated] && authenticate!(:app => $0.split("/").last, :username => config[:username], :password => config[:password], :force => true)
         execute(criteria, options.merge(:authenticated => true))
       else
         $stderr.puts "Authentication failed, giving up"
