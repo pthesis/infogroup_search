@@ -37,6 +37,7 @@ class InfogroupSearchAPI
     @config[:onlycache] = config[:onlycache]
     @cache = config[:cache]
     @config[:scheme] = config[:nossl] ? "http" : "https"
+    @config[:tally] = config[:tally]
 
     @headers = {
      "Content-Type" => "application/json; charset=utf-8",
@@ -175,6 +176,12 @@ class InfogroupSearchAPI
         options[:db],
         options[:id]
       ].join("/")
+    elsif options[:tally]
+      [
+        root,
+        options[:db],
+        "tally"
+      ].join("/")
     else
       [
         # url.path,
@@ -187,6 +194,10 @@ class InfogroupSearchAPI
   end
 
   def execute(criteria = {}, options = {})
+    if options[:tally]
+      criteria["tally#{options[:tally]}"] = true
+    end
+
     if options[:suppress_params]
       params = nil
     else
@@ -245,6 +256,14 @@ class InfogroupSearchAPI
       json = resp.body
       if options[:counts]
         result = JSON.load(json)["MatchCount"] || 0
+      elsif options[:tally]
+        tallies = JSON.load(json)["Data"]
+        keyname = tallies.first.keys.select {|k| k =~ /^Tally/}.first
+        result = tallies.inject({}) do |hash,tally|
+          hash[tally[keyname]] = tally["RecordCount"]
+          hash
+        end
+        # result = tallies["Data"]
       # elsif json =~ /^\"/
       #   result = json.gsub(/\"/, '')
       else
