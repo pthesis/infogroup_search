@@ -258,14 +258,11 @@ class InfogroupSearchAPI
         result = JSON.load(json)["MatchCount"] || 0
       elsif options[:tally]
         tallies = JSON.load(json)["Data"]
-        keyname = tallies.first.keys.select {|k| k =~ /^Tally/}.first
+        keyname = tallies.first.keys.select {|k| k !~ /RecordCount/}.first
         result = tallies.inject({}) do |hash,tally|
           hash[tally[keyname]] = tally["RecordCount"]
           hash
         end
-        # result = tallies["Data"]
-      # elsif json =~ /^\"/
-      #   result = json.gsub(/\"/, '')
       else
         result = JSON.load(json)
       end
