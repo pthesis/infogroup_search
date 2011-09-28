@@ -38,6 +38,7 @@ class InfogroupSearchAPI
     @cache = config[:cache]
     @config[:scheme] = config[:nossl] ? "http" : "https"
     @config[:tally] = config[:tally]
+    @config[:ids] = config[:ids]
 
     @headers = {
      "Content-Type" => "application/json; charset=utf-8",
@@ -181,6 +182,12 @@ class InfogroupSearchAPI
         root,
         options[:db],
         "tally"
+      ].join("/")
+    elsif options[:ids]
+      [
+        root,
+        options[:db],
+        "recordids"
       ].join("/")
     else
       [

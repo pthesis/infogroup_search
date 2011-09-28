@@ -26,6 +26,7 @@ opts = Trollop::options do
   opt :username, "Application username for API authentication (#{ENV['USER']})", :type => :string, :default => ENV['USER']
   opt :password, "Application password for API authentication", :type => :string
   opt :tally, "Tally results by {homevalue, homeincome, age, gender / employeesize, salesvolume}", :type => :string
+  opt :ids, "Only fetch a list of IDs", :default => false
 end
 
 params = ARGV.inject({}) do |h,arg|
