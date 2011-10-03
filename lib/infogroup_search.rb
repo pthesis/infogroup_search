@@ -117,7 +117,7 @@ class InfogroupSearchAPI
     # only need pagesize when retrieving lists of results, not for counts or single-record lookups
     params["pagesize"] = opts[:pagesize] || config[:default_pagesize] unless opts[:counts] || opts[:metadata] || opts[:id]
 
-    if opts[:db] == "usconsumer" && !opts[:metadata]
+    if opts[:db] == "usconsumer" && !opts[:metadata] && !opts[:id]
       params["ReturnAllResidents"] = opts[:individuals] ? "true" : "false"
       params["LifestyleMinimumLevel"] = "7"
       params["TargetReadyMinimumLevel"] = "9"

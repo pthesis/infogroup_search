@@ -3,7 +3,7 @@
 require "ap"
 require "trollop"
 require "redis"
-load "#{File.dirname(__FILE__)}/../lib/infogroup_search_API.rb"
+load "#{File.dirname(__FILE__)}/../lib/infogroup_search.rb"
 
 
 opts = Trollop::options do
@@ -13,14 +13,21 @@ opts = Trollop::options do
   opt :raw, "Dump raw JSON, not pretty-printed", :default => false
   opt :nocache, "Suppress caching", :default => false
   opt :expiration, "Cache expiration in seconds", :default => 7 * 24 * 60 * 60
+  opt :apikey, "Infogroup API key", :default => ENV['INFOGROUP_APIKEY']
+  opt :nossl, "Do NOT use SSL", :default => false
+  opt :username, "Application username for API authentication (#{ENV['USER']})", :type => :string, :default => ENV['USER']
+  opt :password, "Application password for API authentication", :type => :string
 end
 
 consumer_id = ARGV.shift
 
 unless opts[:nocache]
-  @cache = Redis.new
-  # @cache = Dalli::Client.new('localhost:11211', :expires_in => opts[:expiration])
-  # raise "Unable to connect to memcached, aborting" unless @cache
+  begin
+    @cache = Redis.new.connect
+  rescue
+    $stderr.puts "Redis is not running; run with --nocache"
+    @cache = nil
+  end
 end
 
 api = InfogroupSearchAPI.new(opts.merge(:cache => @cache))
