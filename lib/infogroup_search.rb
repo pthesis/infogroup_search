@@ -196,7 +196,7 @@ class InfogroupSearchAPI
       [
         root,
         options[:db],
-        "tally"
+        "tally/"
       ].join("/")
     elsif options[:ids]
       [
@@ -276,15 +276,15 @@ class InfogroupSearchAPI
       #   end
       # end
       json = resp.body
-      if options[:counts]
-        result = JSON.load(json)["MatchCount"] || 0
-      elsif options[:tally]
+      if options[:tally]
         tallies = JSON.load(json)["Data"]
         keyname = tallies.first.keys.select {|k| k !~ /RecordCount/}.first
         result = tallies.inject({}) do |hash,tally|
           hash[tally[keyname]] = tally["RecordCount"]
           hash
         end
+      elsif options[:counts]
+        result = JSON.load(json)["MatchCount"] || 0
       else
         result = JSON.load(json)
       end
