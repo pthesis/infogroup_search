@@ -47,7 +47,7 @@ class InfogroupSearchAPI
     }
 
     @config[:username] = config[:username]
-    @config[:password] = config[:password]
+    @config[:password] = config[:password] || apiconfig(:password)
     authenticate!(:app => $0.split("/").last, :username => config[:username], :password => config[:password])
     self
   end
@@ -84,8 +84,9 @@ class InfogroupSearchAPI
   end
 
   def authenticate!(opts)
-    config_filename = "#{ENV['HOME']}/.infogroup/config.#{config[:env]}.yaml"
-    api_config = YAML.load_file(config_filename) rescue {}
+    # config_filename = "#{ENV['HOME']}/.infogroup/config.#{config[:env]}.yaml"
+    # api_config = YAML.load_file(config_filename) rescue {}
+    api_config = apiconfig()
     begin
       apikey_age = Time.now - Time.parse(api_config[:apikey_timestamp])
       # force key renewal
@@ -96,11 +97,25 @@ class InfogroupSearchAPI
       # generate new API key
       $stderr.puts "Generating new API key..."
       auth_response = authentication(opts) # opts should contain username, password, app
+      api_config[:password] = opts[:password]
       api_config[:apikey] = auth_response["ApiKey"]
       api_config[:apikey_timestamp] = Time.now.to_s
       File.open(config_filename, "w") {|f| f << api_config.to_yaml}
       @config[:apikey] = api_config[:apikey]
     end
+  end
+
+  def apiconfig(key = nil)
+    data = YAML.load_file(config_filename) rescue {}
+    if key
+      data[key]
+    else
+      data
+    end
+  end
+
+  def config_filename
+    "#{ENV['HOME']}/.infogroup/config.#{config[:env]}.yaml"
   end
 
   def full_params(inputs, opts)
