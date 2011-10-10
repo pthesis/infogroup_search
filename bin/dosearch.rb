@@ -27,6 +27,7 @@ opts = Trollop::options do
   opt :password, "Application password for API authentication", :type => :string
   opt :tally, "Tally results by {homevalue, homeincome, age, gender / employeesize, salesvolume}", :type => :string
   opt :ids, "Only fetch a list of IDs", :default => false
+  opt :redis_settings, "Store settings in redis instead of a file", :default => false
 end
 
 params = ARGV.inject({}) do |h,arg|
@@ -47,6 +48,8 @@ unless opts[:nocache]
   # @cache = Dalli::Client.new('localhost:11211', :expires_in => opts[:expiration])
   # raise "Unable to connect to memcached, aborting" unless @cache
 end
+
+opts[:settings] = Redis.new if opts[:redis_settings]
 
 api = InfogroupSearchAPI.new(opts.merge(:cache => @cache))
 

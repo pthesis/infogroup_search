@@ -8,6 +8,31 @@ class InfogroupSearchAPI
   VERSION = "0.2"
   APIKEY_LIFETIME = 72 * 60 * 60 # supposed to expire after 24 hours, setting this higher to allow 401s to happen
 
+  class FileSetting
+    def initialize(config)
+      @filename = "#{ENV['HOME']}/.infogroup/config.#{config[:env] || "prod"}.yaml"
+      readme
+    end
+
+    def readme
+      $stderr.puts "Reading settings from #{@filename}"
+      @data = YAML.load_file(@filename) rescue {}
+    end
+    def writeme
+      File.open(@filename, "w") {|f| f << @data.to_yaml}
+    end
+
+    def get(key)
+      @data[key]
+    end
+
+    def set(key, value)
+      @data[key] = value
+      writeme
+      value
+    end
+  end
+
   attr_reader :config
 
   # config options:
@@ -39,6 +64,7 @@ class InfogroupSearchAPI
     @config[:scheme] = config[:nossl] ? "http" : "https"
     @config[:tally] = config[:tally]
     @config[:ids] = config[:ids]
+    @config[:settings] = config[:settings] || FileSetting.new(:env => @config[:env])
 
     @headers = {
      "Content-Type" => "application/json; charset=utf-8",
@@ -46,9 +72,9 @@ class InfogroupSearchAPI
      "User-Agent" => config[:user_agent] || "github.com/jmay/infogroup_search"
     }
 
-    @config[:username] = config[:username]
-    @config[:password] = config[:password] || apiconfig(:password)
-    authenticate!(:app => $0.split("/").last, :username => config[:username], :password => config[:password])
+    @config[:username] = config[:username] || @config[:settings].get(:username)
+    @config[:password] = config[:password] || @config[:settings].get(:password)
+    authenticate!(:app => $0.split("/").last, :username => @config[:username], :password => @config[:password])
     self
   end
 
@@ -84,38 +110,22 @@ class InfogroupSearchAPI
   end
 
   def authenticate!(opts)
-    # config_filename = "#{ENV['HOME']}/.infogroup/config.#{config[:env]}.yaml"
-    # api_config = YAML.load_file(config_filename) rescue {}
-    api_config = apiconfig()
+    settings = @config[:settings]
     begin
-      apikey_age = Time.now - Time.parse(api_config[:apikey_timestamp])
+      apikey_age = Time.now - Time.parse(settings.get(:apikey_timestamp))
       # force key renewal
       raise "expired" if apikey_age > APIKEY_LIFETIME || opts[:force]
       $stderr.puts "Using cached API key..."
-      @config[:apikey] = api_config[:apikey]
+      @config[:apikey] = settings.get(:apikey)
     rescue
       # generate new API key
       $stderr.puts "Generating new API key..."
       auth_response = authentication(opts) # opts should contain username, password, app
-      api_config[:password] = opts[:password]
-      api_config[:apikey] = auth_response["ApiKey"]
-      api_config[:apikey_timestamp] = Time.now.to_s
-      File.open(config_filename, "w") {|f| f << api_config.to_yaml}
-      @config[:apikey] = api_config[:apikey]
+      settings.set(:password, opts[:password])
+      settings.set(:apikey, auth_response["ApiKey"])
+      settings.set(:apikey_timestamp, Time.now.to_s)
+      @config[:apikey] = settings[:apikey]
     end
-  end
-
-  def apiconfig(key = nil)
-    data = YAML.load_file(config_filename) rescue {}
-    if key
-      data[key]
-    else
-      data
-    end
-  end
-
-  def config_filename
-    "#{ENV['HOME']}/.infogroup/config.#{config[:env]}.yaml"
   end
 
   def full_params(inputs, opts)
@@ -305,3 +315,4 @@ class InfogroupSearchAPI
     File.read("#{ENV['HOME']}/.infogroup/apikey.#{config[:env]}").strip
   end
 end
+
