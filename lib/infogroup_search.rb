@@ -124,7 +124,7 @@ class InfogroupSearchAPI
       settings.set(:password, opts[:password])
       settings.set(:apikey, auth_response["ApiKey"])
       settings.set(:apikey_timestamp, Time.now.to_s)
-      @config[:apikey] = settings[:apikey]
+      @config[:apikey] = settings.get(:apikey)
     end
   end
 
@@ -293,6 +293,8 @@ class InfogroupSearchAPI
           hash[tally[keyname]] = tally["RecordCount"]
           hash
         end
+      elsif options[:ids]
+        result = JSON.load(json)["Data"]
       elsif options[:counts]
         result = JSON.load(json)["MatchCount"] || 0
       else
