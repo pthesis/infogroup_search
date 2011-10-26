@@ -5,7 +5,7 @@ require "yaml"
 require "digest"
 
 class InfogroupSearchAPI
-  VERSION = "0.2"
+  VERSION = "0.4"
   APIKEY_LIFETIME = 72 * 60 * 60 # supposed to expire after 24 hours, setting this higher to allow 401s to happen
 
   class FileSetting
@@ -296,7 +296,11 @@ class InfogroupSearchAPI
       elsif options[:ids]
         result = JSON.load(json)["Data"]
       elsif options[:counts]
-        result = JSON.load(json)["MatchCount"] || 0
+        data = JSON.load(json)
+        result = {
+          total: data["MatchCount"] || 0,
+          email: data["AdditionalCounts"].select {|h| h["Key"] == "EmailCount"}.map {|h| h["Value"]}.first
+        }
       else
         result = JSON.load(json)
       end

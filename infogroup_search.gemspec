@@ -3,7 +3,7 @@
 
 Gem::Specification.new do |s|
   s.name        = "infogroup_search"
-  s.version     = "0.3"
+  s.version     = "0.4"
   s.platform    = Gem::Platform::RUBY
   s.authors = ["Jason May"]
   s.email = %q{jason.may@infogroup.com}
