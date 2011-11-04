@@ -10,7 +10,7 @@ class InfogroupSearchAPI
 
   class FileSetting
     def initialize(config)
-      @filename = "#{ENV['HOME']}/.infogroup/config.#{config[:env] || "prod"}.yaml"
+      @filename = "#{ENV['HOME']}/.infogroup/config.#{config[:env] || "test"}.yaml"
       readme
     end
 
@@ -51,7 +51,7 @@ class InfogroupSearchAPI
   # user_agent: override default user-agent in API request
   def initialize(config = {})
     @config = {}
-    @config[:env] = config[:env] || "prod"
+    @config[:env] = config[:env] || "test"
     # @config[:apikey] = config[:apikey] || cached_apikey
     @config[:default_radius] = 5
     @config[:default_pagesize] = 10
